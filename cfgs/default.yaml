@@ -1,0 +1,56 @@
+seed:                  123
+device:                "cuda:0"
+# Evaluation
+eval:                  False
+render_height:         2048
+# Bit precision
+quantize:              False # Control bit precision using a straight-through estimator.
+pos_bits:              16 # Note: Bit precision of individual coordinate dimension
+scale_bits:            16
+rot_bits:              16
+feat_bits:             16 # Note: Bit precision of individual feature dimension
+# Logging
+log_root:              "results"
+exp_name:              "test/alarm-clock_2k"
+log_level:             "INFO"
+save_image_steps:      100000
+save_ckpt_steps:       100000
+eval_steps:            100
+# Target images
+gamma:                 1.0 # Warning: Learning in a gamma-corrected space, modify with caution
+data_root:             "media"
+input_path:            "textures/alarm-clock_2k"
+downsample:            False # Load downsampled version of target images for training to evaluate image upsampling/super-resolution performance
+downsample_ratio:      2.0
+# Gaussians
+num_gaussians:         10000
+init_scale:            5.0 # Initial Gaussian scale in number of pixels
+topk:                  10 # Warning: Must match hardcoded value in CUDA kernel, modify with caution
+disable_topk_norm:     False
+disable_inverse_scale: False
+ckpt_file:             ""
+disable_color_init:    False
+init_mode:             "gradient"
+init_random_ratio:     0.3
+smap_filter_size:      20 # Gaussian filter size for smoothing saliency maps
+# Loss functions
+l1_loss_ratio:         1.0
+l2_loss_ratio:         0.0
+ssim_loss_ratio:       0.1
+# Optimization
+disable_tiles:         False
+max_steps:             10000
+pos_lr:                5.0e-4
+scale_lr:              2.0e-3
+rot_lr:                2.0e-3
+feat_lr:               5.0e-3
+disable_lr_schedule:   False # Disable learning rate schedule and early stopping
+decay_ratio:           10.0
+check_decay_steps:     1000
+max_decay_times:       0
+decay_threshold:       1.0e-3
+disable_prog_optim:    False # Disable error-guided progressive optimization
+initial_ratio:         0.5
+add_steps:             500
+add_times:             4
+post_min_steps:        3000
