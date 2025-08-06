@@ -60,6 +60,7 @@ class GaussianSplatting2D(nn.Module):
         self.ckpt_dir = os.path.join(self.log_dir, "checkpoints")
         self.train_dir = os.path.join(self.log_dir, "train")
         self.eval_dir = os.path.join(self.log_dir, "eval")
+        self.vis_gaussians = args.vis_gaussians
         self.save_image_steps = args.save_image_steps
         self.save_ckpt_steps = args.save_ckpt_steps
         self.eval_steps = args.eval_steps
@@ -386,7 +387,7 @@ class GaussianSplatting2D(nn.Module):
 
         self.step = 0
         with torch.no_grad():
-            self._log_images(log_final=False, plot_gaussians=True)
+            self._log_images(log_final=False, plot_gaussians=self.vis_gaussians)
         for step in range(self.start_step, self.max_steps+1):
             self.step = step
             self.optimizer.zero_grad()
@@ -407,15 +408,15 @@ class GaussianSplatting2D(nn.Module):
                     if not self.disable_lr_schedule and self.num_gaussians == self.total_num_gaussians:
                         terminate = self._lr_schedule()
                 if self.step % self.save_image_steps == 0:
-                    self._log_images(log_final=False, plot_gaussians=True)
+                    self._log_images(log_final=False, plot_gaussians=self.vis_gaussians)
                 if self.step % self.save_ckpt_steps == 0 and self.num_gaussians == self.total_num_gaussians:
                     self._save_model()
                 if not self.disable_prog_optim and self.step % self.add_steps == 0 and self.num_gaussians < self.total_num_gaussians:
-                    self._add_gaussians(self.max_add_num, plot_gaussians=True)
+                    self._add_gaussians(self.max_add_num, plot_gaussians=self.vis_gaussians)
                 if terminate:
                     break
         with torch.no_grad():
-            self._log_images(log_final=True, plot_gaussians=True)
+            self._log_images(log_final=True, plot_gaussians=self.vis_gaussians)
             self._save_model()
         self.worklog.info("Optimization completed")
         self.worklog.info("***********************************************")
