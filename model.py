@@ -349,7 +349,7 @@ class GaussianSplatting2D(nn.Module):
         if benchmark:
             return render_time
         out_image = out_image.view(-1, img_h, img_w, self.feat_dim).permute(0, 3, 1, 2).contiguous()
-        return out_image.squeeze(), render_time
+        return out_image.squeeze(dim=0), render_time
 
     def _get_scale(self, upsample_ratio=None):
         scale = self.scale
@@ -376,7 +376,7 @@ class GaussianSplatting2D(nn.Module):
             tmp = xy, conics, feat, img_h, img_w
             out_image = rasterize_gaussians_no_tiles(*tmp)
         out_image = out_image.view(-1, img_h, img_w, self.feat_dim).permute(0, 3, 1, 2).contiguous()
-        return out_image.squeeze()
+        return out_image.squeeze(dim=0)
 
     def optimize(self):
         self.psnr_curr, self.ssim_curr = 0.0, 0.0

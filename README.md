@@ -14,13 +14,13 @@
 
 \* Equal contribution &emsp; &dagger; Work done while at Intel
 
-<sup style="vertical-align: top;">1</sup>
+<sup>1</sup>
 <a href="https://www.immersivecomputinglab.org/research/"><img width="30%" src="assets/images/NYU-logo.png" style="vertical-align: top;" alt="NYU logo"></a>
 &emsp;
-<sup style="vertical-align: top;">2</sup>
+<sup>2</sup>
 <a href="https://www.intel.com/content/www/us/en/developer/topic-technology/graphics-research/overview.html"><img width="22%" src="assets/images/Intel-logo.png" style="vertical-align: top;" alt="Intel logo"></a>
 &emsp;
-<sup style="vertical-align: top;">3</sup>
+<sup>3</sup>
 <a href="https://www.amd.com/en.html"><img width="33%" src="assets/images/AMD-logo.png" style="vertical-align: top;" alt="AMD logo"></a>
 
 <a href="https://arxiv.org/abs/2407.01866"><img src="https://img.shields.io/badge/arXiv-2407.01866-red" alt="arXiv"></a>
@@ -29,16 +29,15 @@
 
 </div>
 
-<div style="width: 90%; margin: 0 auto; text-align: left;">
-  <p style="margin-top: 0.5em; font-size: 1.0em;">
+<div style="width: 90%; margin: 0 auto;">
   Neural image representations have emerged as a promising approach for encoding and rendering visual data. Combined with learning-based workflows, they demonstrate impressive trade-offs between visual fidelity and memory footprint. Existing methods in this domain, however, often rely on fixed data structures that suboptimally allocate memory or compute-intensive implicit models, hindering their practicality for real-time graphics applications.
   
   Inspired by recent advancements in radiance field rendering, we introduce Image-GS, a content-adaptive image representation based on 2D Gaussians. Leveraging a custom differentiable renderer, Image-GS reconstructs images by adaptively allocating and progressively optimizing a group of anisotropic, colored 2D Gaussians. It achieves a favorable balance between visual fidelity and memory efficiency across a variety of stylized images frequently seen in graphics workflows, especially for those showing non-uniformly distributed features and in low-bitrate regimes. Moreover, it supports hardware-friendly rapid random access for real-time usage, requiring only 0.3K MACs to decode a pixel. Through error-guided progressive optimization, Image-GS naturally constructs a smooth level-of-detail hierarchy. We demonstrate its versatility with several applications, including texture compression, semantics-aware compression, and joint image compression and restoration.
-  </p>
-  <img src="assets/images/teaser.jpg" width="100%"/>
-  <p style="margin-top: 0.5em; font-size: 0.9em; color: #888;">
+
+  <img src="assets/images/teaser.jpg" width="100%" />
+  <sub>
   Figure 1: Image-GS reconstructs an image by adaptively allocating and progressively optimizing a set of colored 2D Gaussians. It achieves favorable rate-distortion trade-offs, hardware-friendly random access, and flexible quality control through a smooth level-of-detail stack. (a) visualizes the optimized spatial distribution of Gaussians (20% randomly sampled for clarity). (b) Image-GS’s explicit content-adaptive design effectively captures non-uniformly distributed image features and better preserves fine details under constrained memory budgets. In the inset error maps, brighter colors indicate larger errors.
-  </p>
+  </sub>
 </div>
 
 ## Setup
@@ -104,7 +103,7 @@ python main.py --input_path="images/anime-1_2k.png" --exp_name="test/anime-1_2k"
 python main.py --input_path="images/anime-1_2k.png" --exp_name="test/anime-1_2k" --num_gaussians=10000 --quantize --init_mode="saliency"
 ```
 
-#### Command Line Arguments
+### Command Line Arguments
 Please refer to `cfgs/default.yaml` for the full list of arguments and their default values.
 
 **Post-optimization rendering**
