@@ -2,6 +2,7 @@ import logging
 import math
 import os
 import sys
+import warnings
 from time import perf_counter
 
 import numpy as np
@@ -24,14 +25,20 @@ from utils.image_utils import (
     get_grid,
     get_psnr,
     load_images,
+    save_error_maps,
     save_image,
     separate_image_channels,
     visualize_added_gaussians,
-    visualize_gaussians,
+    visualize_gaussian_footprint,
+    visualize_gaussian_position,
 )
 from utils.misc_utils import clean_dir, get_latest_ckpt_step, save_cfg, set_random_seed
 from utils.quantization_utils import ste_quantize
 from utils.saliency_utils import get_smap
+
+warnings.filterwarnings("ignore", category=UserWarning, module="torchvision")
+warnings.filterwarnings("ignore", category=FutureWarning, module="torchvision")
+warnings.filterwarnings("ignore", category=FutureWarning, module="lpips")
 
 
 class GaussianSplatting2D(nn.Module):
@@ -60,6 +67,8 @@ class GaussianSplatting2D(nn.Module):
         self.ckpt_dir = os.path.join(self.log_dir, "checkpoints")
         self.train_dir = os.path.join(self.log_dir, "train")
         self.eval_dir = os.path.join(self.log_dir, "eval")
+        self.save_image_format = args.save_image_format
+        self.save_plot_format = args.save_plot_format
         self.vis_gaussians = args.vis_gaussians
         self.save_image_steps = args.save_image_steps
         self.save_ckpt_steps = args.save_ckpt_steps
@@ -114,7 +123,8 @@ class GaussianSplatting2D(nn.Module):
             self._separate_and_save_images(images=self.gt_images, channels=self.input_channels, path=path)
 
     def _load_target_images(self, path, downsample_ratio=None):
-        self.gt_images, self.input_channels, self.image_fnames = load_images(load_path=path, downsample_ratio=downsample_ratio, gamma=self.gamma)
+        self.gt_images, self.input_channels, self.image_fnames, self.bit_depths = load_images(
+            load_path=path, downsample_ratio=downsample_ratio, gamma=self.gamma)
         self.gt_images = torch.from_numpy(self.gt_images).to(dtype=self.dtype, device=self.device)
         self.img_h, self.img_w = self.gt_images.shape[1:]
         self.tile_bounds = ((self.img_w + self.block_w - 1) // self.block_w, (self.img_h + self.block_h - 1) // self.block_h, 1)
@@ -123,7 +133,7 @@ class GaussianSplatting2D(nn.Module):
         images_sep = separate_image_channels(images=images, input_channels=channels)
         for idx, image in enumerate(images_sep, 1):
             suffix = "" if len(images_sep) == 1 else f"_{idx:d}"
-            save_image(image, f"{path}{suffix}.png", gamma=self.gamma)
+            save_image(image, f"{path}{suffix}.{self.save_image_format}", gamma=self.gamma)
 
     def _init_bit_precision(self, args):
         self.quantize = args.quantize
@@ -161,9 +171,16 @@ class GaussianSplatting2D(nn.Module):
         self._log_compression_rate()
 
     def _log_compression_rate(self):
-        bytes_uncompressed = float(self.gt_images.numel())
-        bpp_uncompressed = float(8 * self.feat_dim)
-        self.worklog.info(f"Uncompressed: {bytes_uncompressed/1e3:.2f} KB | {bpp_uncompressed:.3f} bpp | 8.0 bppc")
+        bytes_uncompressed = 0.0
+        curr_channel = 0
+        for num_channels, bit_depth in zip(self.input_channels, self.bit_depths):
+            bytes_uncompressed += float(self.gt_images[curr_channel:curr_channel+num_channels].numel()) * (bit_depth / 8.0)
+            curr_channel += num_channels
+        bpp_uncompressed = 0.0
+        for num_channels, bit_depth in zip(self.input_channels, self.bit_depths):
+            bpp_uncompressed += float(num_channels) * bit_depth
+        bppc_uncompressed = bpp_uncompressed / self.feat_dim
+        self.worklog.info(f"Uncompressed: {bytes_uncompressed/1e3:.2f} KB | {bpp_uncompressed:.3f} bpp | {bppc_uncompressed:.3f} bppc")
         bits_compressed = (2*self.pos_bits + 2*self.scale_bits + self.rot_bits + self.feat_dim*self.feat_bits) * self.total_num_gaussians
         bytes_compressed = bits_compressed / 8.0
         bpp_compressed = float(bits_compressed) / self.num_pixels
@@ -232,7 +249,7 @@ class GaussianSplatting2D(nn.Module):
         gy, gx = compute_image_gradients(np.power(self.gt_images.detach().cpu().clone().numpy(), 1.0/self.gamma))
         g_norm = np.hypot(gy, gx).astype(np.float32)
         g_norm = g_norm / g_norm.max()
-        save_image(g_norm, f"{self.log_dir}/gmap_res-{self.img_h:d}x{self.img_w:d}.png")
+        save_image(g_norm, f"{self.log_dir}/gmap_res-{self.img_h:d}x{self.img_w:d}.{self.save_image_format}")
         g_norm = np.power(g_norm.reshape(-1), 2.0)
         self.image_gradients = g_norm / g_norm.sum()
         self.worklog.info("Image gradient map successfully saved")
@@ -240,7 +257,7 @@ class GaussianSplatting2D(nn.Module):
 
     def _compute_smap(self, path):
         smap = get_smap(torch.pow(self.gt_images.detach().clone(), 1.0/self.gamma), path, self.smap_filter_size)
-        save_image(smap, f"{self.log_dir}/smap_res-{self.img_h:d}x{self.img_w:d}.png")
+        save_image(smap, f"{self.log_dir}/smap_res-{self.img_h:d}x{self.img_w:d}.{self.save_image_format}")
         self.saliency = (smap / smap.sum()).reshape(-1)
         self.worklog.info("Saliency map successfully saved")
         self.worklog.info("***********************************************")
@@ -480,9 +497,17 @@ class GaussianSplatting2D(nn.Module):
         path = f"{self.train_dir}/render_step-{self.step:d}_psnr-{psnr:.2f}_ssim-{ssim:.4f}_res-{self.img_h:d}x{self.img_w:d}"
         self._separate_and_save_images(images=images, channels=self.input_channels, path=path)
         if plot_gaussians:
-            path = f"{self.train_dir}/gaussian_step-{self.step:d}_psnr-{psnr:.2f}_ssim-{ssim:.4f}_res-{self.img_h:d}x{self.img_w:d}"
-            visualize_gaussians(path, self.xy, self._get_scale(), self.rot, self.feat, self.img_h,
-                                self.img_w, self.input_channels, alpha=0.8, gamma=self.gamma)
+            path = f"{self.train_dir}/flip-error_step-{self.step:d}_psnr-{psnr:.2f}_ssim-{ssim:.4f}_res-{self.img_h:d}x{self.img_w:d}"
+            save_error_maps(path, images, self.gt_images, channels=self.input_channels,
+                            gamma=self.gamma, save_image_format=self.save_image_format)
+            # path = f"{self.train_dir}/gaussian-footprint_step-{self.step:d}_psnr-{psnr:.2f}_ssim-{ssim:.4f}_res-{self.img_h:d}x{self.img_w:d}"
+            # visualize_gaussian_footprint(path, self.xy, self._get_scale(), self.rot, self.feat, self.img_h,
+            #                     self.img_w, self.input_channels, alpha=0.8, gamma=self.gamma, save_image_format=self.save_plot_format)
+            path = f"{self.train_dir}/gaussian-position_step-{self.step:d}_psnr-{psnr:.2f}_ssim-{ssim:.4f}_res-{self.img_h:d}x{self.img_w:d}"
+            every_n = max(1, self.total_num_gaussians // 1000)
+            size = 1.5 * (self.img_h * self.img_w) / 1e4
+            visualize_gaussian_position(path, images, self.xy, self.input_channels, color="#c0b1fc", size=size,
+                                        every_n=every_n, alpha=0.9, gamma=self.gamma, save_image_format=self.save_plot_format)
             images = self._visualize_gaussian_id(self.img_h, self.img_w, self.tile_bounds)
             path = f"{self.train_dir}/gaussian-id_step-{self.step:d}_psnr-{psnr:.2f}_ssim-{ssim:.4f}_res-{self.img_h:d}x{self.img_w:d}"
             self._separate_and_save_images(images=images, channels=self.input_channels, path=path)
@@ -563,10 +588,11 @@ class GaussianSplatting2D(nn.Module):
         self.vis_feat = nn.Parameter(all_vis_feat, requires_grad=False)
         # Plot Gaussians
         if plot_gaussians:
-            path = f"{self.train_dir}/add-gaussian_step-{self.step:d}_num-{self.num_gaussians:d}_res-{self.img_h:d}x{self.img_w:d}"
+            path = f"{self.train_dir}/add-gaussians_step-{self.step:d}_num-{self.num_gaussians:d}_res-{self.img_h:d}x{self.img_w:d}"
             every_n = max(1, self.total_num_gaussians // 2000)
             size = (self.img_h * self.img_w) / 1e4
-            visualize_added_gaussians(path, raw_images, old_xy, new_xy, self.input_channels, size=size, every_n=every_n, alpha=0.8, gamma=self.gamma)
+            visualize_added_gaussians(path, raw_images, old_xy, new_xy, self.input_channels, size=size, every_n=every_n,
+                                      alpha=0.8, gamma=self.gamma, save_image_format=self.save_plot_format)
         # Update optimizer
         self.optimizer = torch.optim.Adam([{'params': self.xy, 'lr': self.pos_lr},
                                            {'params': self.scale, 'lr': self.scale_lr},

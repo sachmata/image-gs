@@ -13,6 +13,8 @@ feat_bits:             16 # Bit precision of individual feature dimension
 log_root:              "results"
 exp_name:              "test/anime-1_2k" # Path to the logging directory
 log_level:             "INFO"
+save_image_format:     "jpg"
+save_plot_format:      "jpg"
 vis_gaussians:         False # Visualize Gaussians during optimization
 save_image_steps:      100000 # Frequency of rendering intermediate results during optimization
 save_ckpt_steps:       100000 # Frequency of checkpointing during optimization
