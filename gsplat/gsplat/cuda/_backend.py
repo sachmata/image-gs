@@ -18,7 +18,7 @@ def cuda_toolkit_available():
         return True
     except FileNotFoundError:
         return False
-    
+
 
 def cuda_toolkit_version():
     """Get the cuda toolkit version."""

@@ -34,6 +34,7 @@ __all__ = [
 
 # Define these for backwards compatibility
 
+
 class MapGaussiansToIntersects(torch.autograd.Function):
     @staticmethod
     def forward(ctx, *args, **kwargs):
@@ -104,7 +105,6 @@ class BinAndSortGaussians(torch.autograd.Function):
         raise NotImplementedError
 
 
-
 class ProjectGaussians2dScaleRot(torch.autograd.Function):
     @staticmethod
     def forward(ctx, *args, **kwargs):
@@ -119,7 +119,6 @@ class ProjectGaussians2dScaleRot(torch.autograd.Function):
         raise NotImplementedError
 
 
-
 class RasterizeGaussiansSum(torch.autograd.Function):
     @staticmethod
     def forward(ctx, *args, **kwargs):
@@ -132,5 +131,3 @@ class RasterizeGaussiansSum(torch.autograd.Function):
     @staticmethod
     def backward(ctx: Any, *grad_outputs: Any) -> Any:
         raise NotImplementedError
-
-
