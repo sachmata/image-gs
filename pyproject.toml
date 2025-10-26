@@ -5,31 +5,42 @@ description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
-  "gsplat",
+  'jaxtyping>=0.3.3',
+  'rich>=14.2.0',
   'torch==2.9.0+cu130',
-  'torchvision==0.24.0+cu130',
   'torchaudio==2.9.0+cu130',
+  'torchvision==0.24.0+cu130',
   "flip-evaluator>=1.6.0.1",
+  "fused-ssim",
+  "gsplat",
   "lpips>=0.1.4",
   "matplotlib>=3.10.7",
   "numpy>=2.3.4",
   "opencv-python>=4.11.0.86",
-  "scikit-image>=0.25.2",
-  "scipy>=1.16.2",
-  "fused-ssim",
   "pytorch-msssim>=1.0.0",
   "pyyaml>=6.0.3",
+  "scikit-image>=0.25.2",
+  "scipy>=1.16.2",
 ]
 
 [tool.uv.sources]
-gsplat = [{ path = "./gsplat" }]
 torch = [{ index = "pytorch-cu130" }]
 torchvision = [{ index = "pytorch-cu130" }]
 torchaudio = [{ index = "pytorch-cu130" }]
 fused-ssim = { git = "https://github.com/rahul-goel/fused-ssim/" }
+gsplat = { workspace = true }
 
 
 [[tool.uv.index]]
 name = "pytorch-cu130"
 url = "https://download.pytorch.org/whl/cu130"
 explicit = true
+
+[tool.uv.workspace]
+members = ["gsplat"]
+
+[tool.uv.extra-build-dependencies]
+gsplat = ["torch"]
+
+[dependency-groups]
+dev = ["ruff>=0.14.2"]

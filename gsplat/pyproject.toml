@@ -1,0 +1,9 @@
+[project]
+name = "gsplat"
+version = "1.4.0"
+requires-python = ">=3.12"
+dependencies = []
+
+[build-system]
+requires = ["setuptools"]
+build-backend = "setuptools.build_meta"
