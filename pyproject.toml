@@ -16,6 +16,9 @@ dependencies = [
   "opencv-python>=4.11.0.86",
   "scikit-image>=0.25.2",
   "scipy>=1.16.2",
+  "fused-ssim",
+  "pytorch-msssim>=1.0.0",
+  "pyyaml>=6.0.3",
 ]
 
 [tool.uv.sources]
@@ -23,6 +26,7 @@ gsplat = [{ path = "./gsplat" }]
 torch = [{ index = "pytorch-cu130" }]
 torchvision = [{ index = "pytorch-cu130" }]
 torchaudio = [{ index = "pytorch-cu130" }]
+fused-ssim = { git = "https://github.com/rahul-goel/fused-ssim/" }
 
 
 [[tool.uv.index]]
